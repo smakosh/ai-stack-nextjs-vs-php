@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Next.js vs PHP · Picking the stack for an AI product</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;900&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f1ece2;--paper2:#e8e1d3;--ink:#141312;--muted:#6f685d;--line:#d4cab8;
+  --red:#e2412b;--next:#141312;--php:#6c71c4;--code:#1a1917;--codeink:#ece6da;
+  --display:"Big Shoulders Display",Impact,sans-serif;--serif:"Newsreader",Georgia,serif;--mono:"JetBrains Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#0e0d0c;overflow:hidden}
+body{font-family:var(--serif);color:var(--ink);-webkit-font-smoothing:antialiased}
+#stage{position:absolute;top:50%;left:50%;width:1600px;height:900px;transform-origin:center;background:var(--paper);overflow:hidden;box-shadow:0 40px 120px rgba(0,0,0,.5)}
+#stage::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.22;mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.3 0 0 0 0 0.27 0 0 0 0 0.22 0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+.slide{position:absolute;inset:0;padding:72px 96px 110px;display:flex;flex-direction:column;opacity:0;visibility:hidden;transition:opacity .45s ease,visibility 0s .45s}
+.slide.active{opacity:1;visibility:visible;transition:opacity .45s ease}
+.slide [data-r]{opacity:0;transform:translateY(14px)}
+.slide.active [data-r]{animation:rise .6s cubic-bezier(.2,.7,.2,1) forwards;animation-delay:calc(var(--d,0) * 90ms + 80ms)}
+@keyframes rise{to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.slide.active [data-r]{animation:none;opacity:1;transform:none}.slide{transition:none}}
+
+.kicker{font-family:var(--mono);font-size:17px;letter-spacing:.14em;text-transform:uppercase;color:var(--red);font-weight:600}
+.topbar{display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px solid var(--ink);padding-bottom:16px;margin-bottom:34px}
+.tally{font-family:var(--mono);font-size:16px;letter-spacing:.08em;display:flex;gap:18px;align-items:center}
+.tally b{font-weight:600}
+.dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:8px;vertical-align:-1px}
+.dot.n{background:var(--next)}.dot.p{background:var(--php)}
+h1{font-family:var(--display);font-weight:900;text-transform:uppercase;line-height:.86;letter-spacing:-.01em}
+h2{font-family:var(--display);font-weight:900;text-transform:uppercase;font-size:92px;line-height:.9;letter-spacing:-.005em}
+h3{font-family:var(--display);font-weight:700;text-transform:uppercase;font-size:34px;letter-spacing:.02em;line-height:1}
+p,li{font-size:25px;line-height:1.38}
+.lede{font-size:30px;line-height:1.35;max-width:1100px;color:#2a2826}
+.muted{color:var(--muted)}
+.mono{font-family:var(--mono)}
+em{font-style:italic}
+
+/* title */
+.title{justify-content:space-between;padding-top:64px}
+.title h1{font-size:250px}
+.title .vs{display:flex;align-items:flex-end;gap:40px}
+.title .vs span.v{font-family:var(--serif);font-style:italic;font-size:120px;color:var(--red);line-height:.9;padding-bottom:22px;text-transform:none}
+.title .phpw{color:var(--php)}
+.title .foot{display:flex;justify-content:space-between;align-items:flex-end;border-top:2px solid var(--ink);padding-top:22px}
+.title .foot p{font-size:28px;max-width:820px}
+
+/* corners */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:56px;flex:1;min-height:0}
+.corner{display:flex;flex-direction:column;gap:18px;min-height:0}
+.corner .tag{display:flex;align-items:center;gap:14px;font-family:var(--display);font-weight:900;font-size:40px;text-transform:uppercase;padding-bottom:12px;border-bottom:4px solid}
+.corner.n .tag{border-color:var(--next)}
+.corner.p .tag{border-color:var(--php);color:var(--php)}
+.corner .tag small{font-family:var(--mono);font-weight:400;font-size:15px;letter-spacing:.06em;color:var(--muted);text-transform:none;margin-left:auto}
+ul.pts{list-style:none;display:flex;flex-direction:column;gap:12px}
+ul.pts li{padding-left:30px;position:relative}
+ul.pts li::before{content:"";position:absolute;left:0;top:15px;width:16px;height:3px;background:currentColor}
+.corner.p ul.pts li::before{background:var(--php)}
+.plus::before{background:#2e8b57!important}
+.minus::before{background:var(--red)!important}
+
+.verdict{margin-top:auto;display:flex;align-items:center;gap:22px;border-top:2px solid var(--ink);padding-top:18px}
+.verdict .label{font-family:var(--mono);font-size:16px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.verdict .who{font-family:var(--display);font-weight:900;font-size:46px;text-transform:uppercase;line-height:1}
+.verdict .who.n{color:var(--next)}.verdict .who.p{color:var(--php)}.verdict .who.d{color:var(--muted)}
+.verdict .why{font-size:24px;color:#2a2826;flex:1}
+.belt{display:inline-block;padding:8px 16px;font-family:var(--mono);font-size:15px;letter-spacing:.1em;text-transform:uppercase;color:var(--paper);background:var(--ink)}
+.belt.p{background:var(--php)}.belt.d{background:var(--muted)}
+
+/* code */
+pre{font-variant-ligatures:none;background:var(--code);color:var(--codeink);font-family:var(--mono);font-size:17.5px;line-height:1.55;padding:24px 26px;border-radius:4px;overflow:hidden;white-space:pre;position:relative}
+pre .f{position:absolute;top:10px;right:16px;font-size:13px;color:#8d867a;letter-spacing:.06em}
+.k{color:#ff8a70}.s{color:#b5d99c}.c{color:#8d867a;font-style:italic}.t{color:#9fb6ff}.fn{color:#f2cf7a}
+
+/* needs grid */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:2px solid var(--ink);border-left:1px solid var(--line)}
+.cell{padding:22px 24px 26px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);min-height:170px}
+.cell .n{font-family:var(--mono);font-size:15px;color:var(--red);letter-spacing:.1em}
+.cell h3{margin:10px 0 8px;font-size:32px}
+.cell p{font-size:21px;color:#3b3833}
+
+/* contenders */
+.stack{display:flex;flex-direction:column;border-top:2px solid}
+.corner.n .stack{border-color:var(--next)}.corner.p .stack{border-color:var(--php)}
+.row{display:grid;grid-template-columns:170px 1fr;gap:18px;padding:13px 0;border-bottom:1px solid var(--line);align-items:baseline}
+.row .l{font-family:var(--mono);font-size:15px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.row .v{font-size:24px}
+.row .v b{font-weight:500}
+
+/* diagram */
+.lanes{display:flex;flex-direction:column;gap:14px;margin-top:6px}
+.lane{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:15px}
+.lane .lbl{width:150px;color:var(--muted)}
+.bar{height:22px;background:var(--ink);border-radius:2px;position:relative}
+.bar.p{background:var(--php)}
+.bar.idle{background:repeating-linear-gradient(45deg,var(--php) 0 6px,transparent 6px 12px);border:1.5px solid var(--php)}
+.loop{display:flex;flex-wrap:wrap;gap:6px;max-width:640px}
+.loop i{width:16px;height:16px;border-radius:50%;border:2px solid var(--ink);display:block}
+.loop i.on{background:var(--ink)}
+.cap{font-family:var(--mono);font-size:14px;color:var(--muted);letter-spacing:.04em}
+
+/* timeline chart */
+.tl{display:flex;flex-direction:column;gap:30px;margin-top:20px}
+.tl .r{display:grid;grid-template-columns:330px 1fr 150px;align-items:center;gap:22px}
+.tl .r .nm{font-size:25px}
+.tl .r .track{height:44px;background:var(--paper2);position:relative}
+.tl .r .fill{position:absolute;left:0;top:0;bottom:0;background:var(--ink);transform-origin:left;transform:scaleX(0)}
+.slide.active .tl .fill{animation:grow 1.1s cubic-bezier(.2,.7,.2,1) forwards;animation-delay:calc(var(--d,0) * 140ms + 300ms)}
+@keyframes grow{to{transform:scaleX(1)}}
+.tl .r .val{font-family:var(--mono);font-size:19px;text-align:right}
+.tl .r.fw .fill{background:var(--red)}
+
+/* scorecard */
+table.score{width:100%;border-collapse:collapse;font-size:23px}
+table.score th{font-family:var(--mono);font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-align:left;padding:0 0 10px;border-bottom:2px solid var(--ink);font-weight:400}
+table.score td{padding:9px 0;border-bottom:1px solid var(--line)}
+table.score td.r{font-family:var(--mono);font-size:16px;color:var(--red);width:70px}
+table.score td.w{width:110px;text-align:center}
+.pip{display:inline-block;width:22px;height:22px;border-radius:50%;border:2px solid var(--line)}
+.pip.n{background:var(--next);border-color:var(--next)}.pip.p{background:var(--php);border-color:var(--php)}.pip.d{background:repeating-linear-gradient(45deg,var(--muted) 0 3px,transparent 3px 6px);border-color:var(--muted)}
+.totals{display:flex;flex-direction:column;justify-content:center;gap:28px}
+.total{display:flex;align-items:baseline;gap:22px;border-bottom:2px solid var(--line);padding-bottom:16px}
+.total .num{font-family:var(--display);font-weight:900;font-size:170px;line-height:.8}
+.total .nm{font-family:var(--display);font-weight:700;font-size:44px;text-transform:uppercase}
+.total.p .num,.total.p .nm{color:var(--php)}
+
+/* winner */
+.winner{background:var(--ink);color:var(--paper)}
+.winner .kicker{color:var(--red)}
+.winner h1{font-size:230px;color:var(--paper)}
+.winner .crown{font-family:var(--serif);font-style:italic;font-size:44px;color:#d9d1c3;max-width:1100px;line-height:1.25}
+.winner .recipe{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-top:2px solid var(--paper);margin-top:auto}
+.winner .recipe>div{padding:18px 20px 4px 0;border-right:1px solid #3a3733;margin-right:20px}
+.winner .recipe>div:last-child{border-right:0}
+.winner .recipe .l{font-family:var(--mono);font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:#8d867a}
+.winner .recipe .v{font-size:24px;margin-top:6px}
+.winner .verdict{border-color:#3a3733}
+
+.big-q{font-family:var(--serif);font-style:italic;font-size:64px;line-height:1.15;max-width:1250px}
+.big-q b{font-style:normal;font-family:var(--display);font-weight:900;text-transform:uppercase;color:var(--red);font-size:72px}
+
+/* chrome */
+#ui{position:absolute;left:96px;right:96px;bottom:34px;display:flex;align-items:center;gap:22px;z-index:5;font-family:var(--mono);font-size:14px;letter-spacing:.08em;color:var(--muted)}
+#prog{flex:1;height:3px;background:var(--line);position:relative}
+#prog i{position:absolute;left:0;top:0;bottom:0;background:var(--red);transition:width .4s ease}
+#ui button{all:unset;cursor:pointer;width:38px;height:38px;display:grid;place-items:center;border:1.5px solid var(--line);border-radius:50%;color:var(--ink);transition:background .15s,border-color .15s,transform .1s}
+#ui button:hover{border-color:var(--ink);background:var(--paper2)}
+#ui button:active{transform:scale(.94)}
+#ui button:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+body.dark #ui{color:#8d867a}body.dark #ui button{color:var(--paper);border-color:#3a3733}body.dark #ui button:hover{background:#24221f;border-color:var(--paper)}body.dark #prog{background:#3a3733}
+.src{font-family:var(--mono);font-size:13px;color:var(--muted);letter-spacing:.03em;line-height:1.6}
+</style>
+</head>
+<body>
+<div id="stage">
+
+<!-- 1 TITLE -->
+<section class="slide title">
+  <div class="topbar" data-r><span class="kicker">Fight card · Stack decision for an AI product</span><span class="mono muted">October 2026</span></div>
+  <div class="vs">
+    <h1 data-r style="--d:1">Next.js</h1>
+    <span class="v" data-r style="--d:2">vs</span>
+    <h1 class="phpw" data-r style="--d:3">PHP</h1>
+  </div>
+  <div class="foot" data-r style="--d:4">
+    <p>Ten rounds on what an AI product actually needs: streaming, long connections, chat UI, agents, types, plumbing, cost and people. One winner at the end.</p>
+    <span class="mono muted">→ / space to advance</span>
+  </div>
+</section>
+
+<!-- 2 WHAT AI NEEDS -->
+<section class="slide">
+  <div class="topbar" data-r><span class="kicker">The brief</span><span class="mono muted">What is different about AI products</span></div>
+  <h2 data-r style="--d:1">An AI product is not a CRUD app<br>with a chatbot bolted on</h2>
+  <div class="grid" style="margin-top:36px">
+    <div class="cell" data-r style="--d:2"><span class="n">01</span><h3>Streaming</h3><p>Tokens arrive over 5 to 60 seconds. Users expect to watch them land.</p></div>
+    <div class="cell" data-r style="--d:3"><span class="n">02</span><h3>Long connections</h3><p>Thousands of open, mostly idle requests waiting on a model.</p></div>
+    <div class="cell" data-r style="--d:4"><span class="n">03</span><h3>Live UI</h3><p>Chat, tool calls, partial results and generated components on screen.</p></div>
+    <div class="cell" data-r style="--d:5"><span class="n">04</span><h3>Agents and jobs</h3><p>Multi-step tool loops, retries, background runs, scheduled work.</p></div>
+    <div class="cell" data-r style="--d:6"><span class="n">05</span><h3>Structured output</h3><p>JSON the model returns must match a schema your code trusts.</p></div>
+    <div class="cell" data-r style="--d:7"><span class="n">06</span><h3>Plain SaaS too</h3><p>Auth, billing, admin, usage metering, cost control. Still the bulk of the code.</p></div>
+  </div>
+</section>
+
+<!-- 3 CONTENDERS -->
+<section class="slide">
+  <div class="topbar" data-r><span class="kicker">Tale of the tape</span><span class="mono muted">Current stable versions</span></div>
+  <div class="split">
+    <div class="corner n" data-r style="--d:1">
+      <div class="tag">Next.js corner <small>TypeScript</small></div>
+      <div class="stack">
+        <div class="row"><span class="l">Framework</span><span class="v"><b>Next.js 16.4</b>, React 19, App Router, Server Components</span></div>
+        <div class="row"><span class="l">AI layer</span><span class="v"><b>AI SDK 7</b>: streamText, useChat, tools, agents, 30+ providers</span></div>
+        <div class="row"><span class="l">Runtime</span><span class="v">Node.js event loop, edge or serverless</span></div>
+        <div class="row"><span class="l">Data</span><span class="v">Postgres + pgvector, Drizzle or Prisma</span></div>
+        <div class="row"><span class="l">Jobs</span><span class="v">Vercel Workflow, Inngest, Trigger.dev, BullMQ</span></div>
+        <div class="row"><span class="l">Hosting</span><span class="v">Vercel, or self-host with Docker</span></div>
+      </div>
+    </div>
+    <div class="corner p" data-r style="--d:2">
+      <div class="tag">PHP corner <small>PHP 8.5</small></div>
+      <div class="stack">
+        <div class="row"><span class="l">Framework</span><span class="v"><b>Laravel 13</b>, Livewire or Inertia for the UI</span></div>
+        <div class="row"><span class="l">AI layer</span><span class="v"><b>Laravel AI SDK</b> (stable since Laravel 13) and <b>Prism</b></span></div>
+        <div class="row"><span class="l">Runtime</span><span class="v">PHP-FPM by default, Octane on FrankenPHP or Swoole</span></div>
+        <div class="row"><span class="l">Data</span><span class="v">Eloquent, migrations, pgvector via packages</span></div>
+        <div class="row"><span class="l">Jobs</span><span class="v">Queues + Horizon, scheduler, built in</span></div>
+        <div class="row"><span class="l">Hosting</span><span class="v">Laravel Cloud, Forge, any VPS or shared host</span></div>
+      </div>
+    </div>
+  </div>
+  <p class="src" data-r style="--d:3;margin-top:18px">Checked Oct 2026: next 16.4.0 and ai 7.0 on npm, laravel/framework v13.35.0 on Packagist, PHP 8.5.11 on php.net.</p>
+</section>
+
+<!-- R1 STREAMING -->
+<section class="slide" data-round="1" data-winner="n">
+  <div class="topbar" data-r><span class="kicker">Round 01 · Streaming responses</span><span class="tally"></span></div>
+  <div class="split">
+    <div class="corner n" data-r style="--d:1">
+      <div class="tag">Next.js</div>
+<pre><span class="f">app/api/chat/route.ts</span><span class="k">import</span> { streamText, convertToModelMessages } <span class="k">from</span> <span class="s">"ai"</span>;
+
+<span class="k">export async function</span> <span class="fn">POST</span>(req: <span class="t">Request</span>) {
+  <span class="k">const</span> { messages } = <span class="k">await</span> req.<span class="fn">json</span>();
+  <span class="k">const</span> result = <span class="fn">streamText</span>({
+    model: <span class="s">"anthropic/claude-sonnet-4.5"</span>,
+    messages: <span class="k">await</span> <span class="fn">convertToModelMessages</span>(messages),
+  });
+  <span class="k">return</span> result.<span class="fn">toUIMessageStreamResponse</span>();
+}</pre>
+      <ul class="pts"><li class="plus">Streaming is the default path, not an option</li><li class="plus">Same protocol the client hook reads</li></ul>
+    </div>
+    <div class="corner p" data-r style="--d:2">
+      <div class="tag">PHP</div>
+<pre><span class="f">routes/web.php · Prism</span><span class="t">Route</span>::<span class="fn">post</span>(<span class="s">'/chat'</span>, <span class="k">function</span> (<span class="t">Request</span> $request) {
+    <span class="k">return</span> <span class="t">Prism</span>::<span class="fn">text</span>()
+        -><span class="fn">using</span>(<span class="t">Provider</span>::Anthropic, <span class="s">'claude-sonnet-4-5'</span>)
+        -><span class="fn">withPrompt</span>($request-><span class="fn">string</span>(<span class="s">'prompt'</span>))
+        -><span class="fn">asEventStreamResponse</span>();
+});</pre>
+      <ul class="pts"><li class="plus">Short and readable, Server-Sent Events out of the box</li><li class="minus">Each open stream pins a PHP-FPM worker (round 2)</li><li class="minus">Output buffering in nginx or FPM can silently break streaming</li></ul>
+    </div>
+  </div>
+  <div class="verdict" data-r style="--d:3"><span class="label">Round to</span><span class="who n">Next.js</span><span class="why">Both can stream. In Next.js it is the paved road from server to screen.</span></div>
+</section>
+
+<!-- R2 CONCURRENCY -->
+<section class="slide" data-round="2" data-winner="n">
+  <div class="topbar" data-r><span class="kicker">Round 02 · Holding thousands of open streams</span><span class="tally"></span></div>
+  <div class="split">
+    <div class="corner n" data-r style="--d:1">
+      <div class="tag">Node.js event loop</div>
+      <p>One process holds many sockets. While a stream waits on the model it costs memory, not a thread.</p>
+      <div class="loop" aria-hidden="true">
+        <i class="on"></i><i></i><i></i><i class="on"></i><i></i><i></i><i></i><i class="on"></i><i></i><i></i><i></i><i></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="on"></i><i></i><i></i><i></i><i></i>
+      </div>
+      <span class="cap">● busy &nbsp; ○ open and waiting on tokens · one process</span>
+      <ul class="pts"><li class="plus">Thousands of concurrent streams per instance</li><li class="minus">On serverless, watch function duration limits and cost per second</li></ul>
+    </div>
+    <div class="corner p" data-r style="--d:2">
+      <div class="tag">PHP-FPM share-nothing</div>
+      <p>One worker per request. A 30 second stream blocks that worker for 30 seconds.</p>
+      <div class="lanes" aria-hidden="true">
+        <div class="lane"><span class="lbl">worker 1</span><div class="bar idle" style="width:420px"></div></div>
+        <div class="lane"><span class="lbl">worker 2</span><div class="bar idle" style="width:360px"></div></div>
+        <div class="lane"><span class="lbl">worker 3</span><div class="bar idle" style="width:440px"></div></div>
+        <div class="lane"><span class="lbl">request 4</span><span class="cap" style="color:var(--red)">queued · pm.max_children reached</span></div>
+      </div>
+      <ul class="pts"><li class="plus">Octane on FrankenPHP or Swoole fixes much of this</li><li class="minus">Octane means long-lived state, leaks and package compatibility to manage</li></ul>
+    </div>
+  </div>
+  <div class="verdict" data-r style="--d:3"><span class="label">Round to</span><span class="who n">Next.js</span><span class="why">Async I/O is the native model in Node. In PHP it is an upgrade you opt into.</span></div>
+</section>
+
+<!-- R3 UI -->
+<section class="slide" data-round="3" data-winner="n">
+  <div class="topbar" data-r><span class="kicker">Round 03 · The AI interface</span><span class="tally"></span></div>
+  <div class="split">
+    <div class="corner n" data-r style="--d:1">
+      <div class="tag">React + AI SDK UI</div>
+<pre><span class="f">app/chat.tsx</span><span class="k">const</span> { messages, sendMessage, status } = <span class="fn">useChat</span>();
+
+{messages.<span class="fn">map</span>((m) =>
+  m.parts.<span class="fn">map</span>((part) =>
+    part.type === <span class="s">"tool-weather"</span>
+      ? &lt;<span class="t">WeatherCard</span> {...part.output} /&gt;
+      : &lt;<span class="t">Markdown</span>&gt;{part.text}&lt;/<span class="t">Markdown</span>&gt;
+  )
+)}</pre>
+      <ul class="pts"><li class="plus">Tool calls render as real components, typed</li><li class="plus">Shadcn and AI Elements give chat UI kits for free</li></ul>
+    </div>
+    <div class="corner p" data-r style="--d:2">
+      <div class="tag">Livewire or Inertia</div>
+      <ul class="pts">
+        <li class="plus">Livewire <span class="mono">wire:stream</span> streams text into the page with no JS build</li>
+        <li class="minus">Rich chat state, tool cards, retries and optimistic updates push you toward JavaScript</li>
+        <li class="minus">Inertia + React works well, but now you run React anyway, just without the React AI hooks wired to your backend</li>
+        <li class="minus">Fewer ready-made AI UI kits</li>
+      </ul>
+    </div>
+  </div>
+  <div class="verdict" data-r style="--d:3"><span class="label">Round to</span><span class="who n">Next.js</span><span class="why">AI products live in the interface. The best AI UI tooling is React-first.</span></div>
+</section>
+
+<!-- R4 ECOSYSTEM -->
+<section class="slide" data-round="4" data-winner="n">
+  <div class="topbar" data-r><span class="kicker">Round 04 · SDKs and ecosystem</span><span class="tally"></span></div>
+  <div class="split">
+    <div class="corner n" data-r style="--d:1">
+      <div class="tag">TypeScript</div>
+      <ul class="pts">
+        <li class="plus">Every major lab ships an official TypeScript SDK, often on day one of a new feature</li>
+        <li class="plus">MCP reference SDK, agent frameworks (Mastra, LangGraph.js), evals and tracing all land in TS early</li>
+        <li class="plus">AI SDK swaps providers by changing one string</li>
+        <li class="minus">Moves fast. Majors every year, migrations to keep up with</li>
+      </ul>
+    </div>
+    <div class="corner p" data-r style="--d:2">
+      <div class="tag">PHP</div>
+      <ul class="pts">
+        <li class="plus">Laravel AI SDK: agents, tools, embeddings, images, audio, vector stores</li>
+        <li class="plus">Prism: mature multi-provider layer, can even emit the Vercel data stream format</li>
+        <li class="plus">laravel/mcp to expose your app to agents</li>
+        <li class="minus">New provider features often reach PHP weeks or months later, via community wrappers</li>
+      </ul>
+    </div>
+  </div>
+  <div class="verdict" data-r style="--d:3"><span class="label">Round to</span><span class="who n">Next.js</span><span class="why">PHP's AI story is now good. TypeScript's is where the industry ships first.</span></div>
+</section>
+
+<!-- R5 STRUCTURED -->
+<section class="slide" data-round="5" data-winner="n">
+  <div class="topbar" data-r><span class="kicker">Round 05 · Structured output and types</span><span class="tally"></span></div>
+  <div class="split">
+    <div class="corner n" data-r style="--d:1">
+      <div class="tag">Zod in, typed object out</div>
+<pre><span class="k">const</span> { output } = <span class="k">await</span> <span class="fn">generateText</span>({
+  model,
+  prompt,
+  output: <span class="t">Output</span>.<span class="fn">object</span>({
+    schema: z.<span class="fn">object</span>({
+      sentiment: z.<span class="fn">enum</span>([<span class="s">"pos"</span>, <span class="s">"neg"</span>]),
+      score: z.<span class="fn">number</span>(),
+    }),
+  }),
+});
+output.score; <span class="c">// number, checked at compile time</span></pre>
+      <ul class="pts"><li class="plus">One schema validates the model and types your code</li></ul>
+    </div>
+    <div class="corner p" data-r style="--d:2">
+      <div class="tag">Schema objects, array out</div>
+<pre><span class="k">$res</span> = <span class="t">Prism</span>::<span class="fn">structured</span>()
+    -><span class="fn">using</span>(<span class="t">Provider</span>::OpenAI, <span class="s">'gpt-5'</span>)
+    -><span class="fn">withSchema</span>(<span class="k">new</span> <span class="t">ObjectSchema</span>(<span class="s">'review'</span>, <span class="s">'Review'</span>, [
+        <span class="k">new</span> <span class="t">EnumSchema</span>(<span class="s">'sentiment'</span>, <span class="s">''</span>, [<span class="s">'pos'</span>, <span class="s">'neg'</span>]),
+        <span class="k">new</span> <span class="t">NumberSchema</span>(<span class="s">'score'</span>, <span class="s">''</span>),
+    ]))
+    -><span class="fn">withPrompt</span>($prompt)
+    -><span class="fn">asStructured</span>();
+
+$res->structured[<span class="s">'score'</span>]; <span class="c">// mixed: no compile-time type</span></pre>
+      <ul class="pts"><li class="minus">Works, but the type ends at the array boundary</li></ul>
+    </div>
+  </div>
+  <div class="verdict" data-r style="--d:3"><span class="label">Round to</span><span class="who n">Next.js</span><span class="why">Model output is untrusted input. End-to-end types catch it before users do.</span></div>
+</section>
+
+<!-- R6 JOBS -->
+<section class="slide" data-round="6" data-winner="p">
+  <div class="topbar" data-r><span class="kicker">Round 06 · Background jobs and agents</span><span class="tally"></span></div>
+  <div class="split">
+    <div class="corner n" data-r style="--d:1">
+      <div class="tag">Next.js</div>
+      <ul class="pts">
+        <li class="plus">AI SDK agent loops with tools and stop conditions</li>
+        <li class="plus">Durable runs via Vercel Workflow, Inngest or Trigger.dev</li>
+        <li class="minus">None of it ships with Next.js. Pick a vendor or run BullMQ and Redis yourself</li>
+        <li class="minus">Serverless timeouts push long agent runs out of the request</li>
+      </ul>
+    </div>
+    <div class="corner p" data-r style="--d:2">
+      <div class="tag">Laravel</div>
+      <ul class="pts">
+        <li class="plus">Queues, retries, backoff, batching, rate limiting: built in</li>
+        <li class="plus">Horizon dashboard to watch every agent job</li>
+        <li class="plus">Scheduler for nightly embeddings, evals, digests</li>
+        <li class="plus">Laravel AI SDK agents can run queued</li>
+      </ul>
+    </div>
+  </div>
+  <div class="verdict" data-r style="--d:3"><span class="label">Round to</span><span class="who p">PHP</span><span class="why">Laravel's queue story is ten years mature and costs zero vendors.</span></div>
+</section>
+
+<!-- R7 BATTERIES -->
+<section class="slide" data-round="7" data-winner="p">
+  <div class="topbar" data-r><span class="kicker">Round 07 · Auth, billing, admin, the boring 80%</span><span class="tally"></span></div>
+  <div class="split">
+    <div class="corner n" data-r style="--d:1">
+      <div class="tag">Assemble it</div>
+      <div class="stack">
+        <div class="row"><span class="l">Auth</span><span class="v">Better Auth, Clerk, Auth.js</span></div>
+        <div class="row"><span class="l">ORM</span><span class="v">Drizzle or Prisma</span></div>
+        <div class="row"><span class="l">Billing</span><span class="v">Stripe SDK, hand-wired webhooks</span></div>
+        <div class="row"><span class="l">Admin</span><span class="v">Build it, or buy a tool</span></div>
+        <div class="row"><span class="l">Mail</span><span class="v">Resend + React Email</span></div>
+      </div>
+      <p class="muted">Great parts. You are the integrator.</p>
+    </div>
+    <div class="corner p" data-r style="--d:2">
+      <div class="tag">It is in the box</div>
+      <div class="stack">
+        <div class="row"><span class="l">Auth</span><span class="v">Starter kits, Sanctum, Socialite</span></div>
+        <div class="row"><span class="l">ORM</span><span class="v">Eloquent + migrations</span></div>
+        <div class="row"><span class="l">Billing</span><span class="v">Cashier for Stripe and Paddle</span></div>
+        <div class="row"><span class="l">Admin</span><span class="v">Filament or Nova in an afternoon</span></div>
+        <div class="row"><span class="l">Mail</span><span class="v">Mailables, notifications</span></div>
+      </div>
+      <p class="muted">One framework, one set of conventions.</p>
+    </div>
+  </div>
+  <div class="verdict" data-r style="--d:3"><span class="label">Round to</span><span class="who p">PHP</span><span class="why">Most of an AI product is still a SaaS product. Laravel ships that part faster.</span></div>
+</section>
+
+<!-- R8 HOSTING -->
+<section class="slide" data-round="8" data-winner="p">
+  <div class="topbar" data-r><span class="kicker">Round 08 · Hosting and running cost</span><span class="tally"></span></div>
+  <div class="split">
+    <div class="corner n" data-r style="--d:1">
+      <div class="tag">Next.js</div>
+      <ul class="pts">
+        <li class="plus">Vercel: push to deploy, previews, edge, observability</li>
+        <li class="minus">Long streams bill as compute time. Usage pricing can surprise at scale</li>
+        <li class="minus">Self-hosting works with Docker, but some features are tuned for Vercel</li>
+      </ul>
+    </div>
+    <div class="corner p" data-r style="--d:2">
+      <div class="tag">PHP</div>
+      <ul class="pts">
+        <li class="plus">Runs on a 5 dollar VPS. Forge and Laravel Cloud make it one click</li>
+        <li class="plus">Predictable flat cost, no vendor lock</li>
+        <li class="minus">You size workers or move to Octane for stream-heavy load</li>
+      </ul>
+    </div>
+  </div>
+  <div class="verdict" data-r style="--d:3"><span class="label">Round to</span><span class="who p">PHP</span><span class="why">Cheaper and plainer to run. Close round: the model bill dwarfs both.</span></div>
+</section>
+
+<!-- R9 SPEED -->
+<section class="slide" data-round="9" data-winner="d">
+  <div class="topbar" data-r><span class="kicker">Round 09 · Raw speed</span><span class="tally"></span></div>
+  <h2 data-r style="--d:1">Where the time goes in one chat request</h2>
+  <p class="lede" data-r style="--d:2;margin-top:14px">Typical orders of magnitude. The framework is the red sliver.</p>
+  <div class="tl">
+    <div class="r fw" data-r style="--d:3"><span class="nm">Framework overhead</span><div class="track"><div class="fill" style="width:0.4%;--d:1"></div></div><span class="val">5 to 30 ms</span></div>
+    <div class="r" data-r style="--d:4"><span class="nm">Model, first token</span><div class="track"><div class="fill" style="width:8%;--d:2"></div></div><span class="val">0.3 to 2 s</span></div>
+    <div class="r" data-r style="--d:5"><span class="nm">Model, full answer</span><div class="track"><div class="fill" style="width:100%;--d:3"></div></div><span class="val">5 to 30 s</span></div>
+    <div class="r" data-r style="--d:6"><span class="nm">Agent with tool calls</span><div class="track"><div class="fill" style="width:100%;background:repeating-linear-gradient(90deg,var(--ink) 0 40px,var(--paper2) 40px 46px);--d:4"></div></div><span class="val">30 s to minutes</span></div>
+  </div>
+  <div class="verdict" data-r style="--d:7"><span class="label">Round</span><span class="who d">Draw</span><span class="why">PHP 8.5 with JIT and Node are both fast enough. Latency is the model's, not yours.</span></div>
+</section>
+
+<!-- R10 PEOPLE -->
+<section class="slide" data-round="10" data-winner="n">
+  <div class="topbar" data-r><span class="kicker">Round 10 · Team, hiring and AI coding agents</span><span class="tally"></span></div>
+  <div class="split">
+    <div class="corner n" data-r style="--d:1">
+      <div class="tag">TypeScript</div>
+      <ul class="pts">
+        <li class="plus">One language on client, server, jobs and edge</li>
+        <li class="plus">Largest pool of frontend and full-stack hires</li>
+        <li class="plus">Coding agents are strongest in TS and React, and types give them a fast feedback loop</li>
+        <li class="plus">AI engineers and examples default to TS or Python</li>
+      </ul>
+    </div>
+    <div class="corner p" data-r style="--d:2">
+      <div class="tag">PHP</div>
+      <ul class="pts">
+        <li class="plus">Huge, loyal Laravel community and great docs</li>
+        <li class="plus">Strong conventions help coding agents too (Laravel Boost)</li>
+        <li class="minus">Two languages once the UI gets rich</li>
+        <li class="minus">Smaller share of new AI-native talent</li>
+      </ul>
+    </div>
+  </div>
+  <div class="verdict" data-r style="--d:3"><span class="label">Round to</span><span class="who n">Next.js</span><span class="why">One language, top of every AI coding model's training set.</span></div>
+</section>
+
+<!-- SCORECARD -->
+<section class="slide">
+  <div class="topbar" data-r><span class="kicker">Official scorecard</span><span class="mono muted">10 rounds</span></div>
+  <div class="split" style="grid-template-columns:1.35fr 1fr">
+    <table class="score" data-r style="--d:1">
+      <thead><tr><th>Rd</th><th>Category</th><th style="text-align:center">Next.js</th><th style="text-align:center">PHP</th></tr></thead>
+      <tbody id="scorebody"></tbody>
+    </table>
+    <div class="totals">
+      <div class="total" data-r style="--d:2"><span class="num" id="tn">0</span><span class="nm">Next.js</span></div>
+      <div class="total p" data-r style="--d:3"><span class="num" id="tp">0</span><span class="nm">PHP</span></div>
+      <p class="muted" data-r style="--d:4" id="td"></p>
+    </div>
+  </div>
+</section>
+
+<!-- WHEN PHP -->
+<section class="slide">
+  <div class="topbar" data-r><span class="kicker">Honest corner</span><span class="mono muted">When PHP is still the right call</span></div>
+  <h2 data-r style="--d:1">Pick Laravel if</h2>
+  <div class="grid" style="margin-top:34px">
+    <div class="cell" data-r style="--d:2"><span class="n">A</span><h3>You already run Laravel</h3><p>Adding AI to an existing app beats a rewrite. Laravel AI SDK drops straight in.</p></div>
+    <div class="cell" data-r style="--d:3"><span class="n">B</span><h3>AI is a feature</h3><p>Summaries, classification, search in an admin-heavy app. Mostly async jobs, little live UI.</p></div>
+    <div class="cell" data-r style="--d:4"><span class="n">C</span><h3>Your team is PHP</h3><p>A senior Laravel team ships faster than a junior TS team. People beat stacks.</p></div>
+  </div>
+  <h2 data-r style="--d:5;font-size:56px;margin-top:40px">The hybrid that works</h2>
+  <p class="lede" data-r style="--d:6;margin-top:12px">Laravel as API, queues and admin. Next.js as the AI front end with AI SDK UI, streaming straight from Prism in the same wire format.</p>
+</section>
+
+<!-- WINNER -->
+<section class="slide winner" data-dark>
+  <div class="topbar" style="border-color:var(--paper)" data-r><span class="kicker">The decision</span><span class="mono" style="color:#8d867a">Winner by points · 6 to 3, 1 draw</span></div>
+  <span class="belt" data-r style="--d:1;align-self:flex-start;background:var(--red)">Winner</span>
+  <h1 data-r style="--d:2;margin-top:18px">Next.js</h1>
+  <p class="crown" data-r style="--d:3;margin-top:22px">For an AI-native product, streaming, long connections, live UI and typed model output are the core. TypeScript makes those the default path.</p>
+  <div class="recipe" data-r style="--d:4">
+    <div><div class="l">App</div><div class="v">Next.js 16 + React 19</div></div>
+    <div><div class="l">AI</div><div class="v">AI SDK 7 behind an LLM gateway</div></div>
+    <div><div class="l">Data</div><div class="v">Postgres + pgvector, Drizzle</div></div>
+    <div><div class="l">Jobs</div><div class="v">Durable workflows + queue</div></div>
+  </div>
+  <p class="src" data-r style="--d:5;margin-top:16px;color:#8d867a">Steal from Laravel: one opinionated set of conventions, built-in queues, an admin from day one.</p>
+</section>
+
+<div id="ui">
+  <button id="prev" aria-label="Previous slide">&#8592;</button>
+  <span id="count">01 / 16</span>
+  <div id="prog"><i></i></div>
+  <button id="next" aria-label="Next slide">&#8594;</button>
+</div>
+</div>
+
+<script>
+(()=>{
+const stage=document.getElementById('stage');
+const slides=[...document.querySelectorAll('.slide')];
+const bar=document.querySelector('#prog i');
+const count=document.getElementById('count');
+let i=Math.max(0,Math.min(slides.length-1,(parseInt(location.hash.slice(1))||1)-1));
+const fit=()=>{const s=Math.min(innerWidth/1600,innerHeight/900);stage.style.transform=`translate(-50%,-50%) scale(${s})`;};
+const rounds=slides.filter(s=>s.dataset.round);
+let n=0,p=0;
+rounds.forEach(s=>{const w=s.dataset.winner;if(w==='n')n++;if(w==='p')p++;
+  const t=s.querySelector('.tally');t.innerHTML=`<span><span class="dot n"></span>Next.js <b>${n}</b></span><span><span class="dot p"></span>PHP <b>${p}</b></span>`;});
+const body=document.getElementById('scorebody');
+rounds.forEach(s=>{const w=s.dataset.winner;const name=s.querySelector('.kicker').textContent.split('·')[1].trim();
+  body.insertAdjacentHTML('beforeend',`<tr><td class="r">${String(s.dataset.round).padStart(2,'0')}</td><td>${name}</td><td class="w"><span class="pip ${w==='n'?'n':w==='d'?'d':''}"></span></td><td class="w"><span class="pip ${w==='p'?'p':w==='d'?'d':''}"></span></td></tr>`);});
+document.getElementById('tn').textContent=n;document.getElementById('tp').textContent=p;
+const d=rounds.length-n-p;document.getElementById('td').textContent=`${d} draw${d===1?'':'s'}. Rounds weighted equally; the AI-specific rounds (1 to 5) go 5 to 0.`;
+const show=k=>{i=Math.max(0,Math.min(slides.length-1,k));slides.forEach((s,j)=>s.classList.toggle('active',j===i));
+  document.body.classList.toggle('dark',slides[i].hasAttribute('data-dark'));
+  bar.style.width=((i+1)/slides.length*100)+'%';count.textContent=`${String(i+1).padStart(2,'0')} / ${slides.length}`;
+  history.replaceState(null,'','#'+(i+1));};
+document.getElementById('next').onclick=e=>{e.stopPropagation();show(i+1)};
+document.getElementById('prev').onclick=e=>{e.stopPropagation();show(i-1)};
+addEventListener('keydown',e=>{if(['ArrowRight','PageDown',' ','Enter'].includes(e.key)){e.preventDefault();show(i+1)}
+  else if(['ArrowLeft','PageUp','Backspace'].includes(e.key)){e.preventDefault();show(i-1)}
+  else if(e.key==='Home')show(0);else if(e.key==='End')show(slides.length-1);});
+let tx=null;addEventListener('touchstart',e=>tx=e.touches[0].clientX,{passive:true});
+addEventListener('touchend',e=>{if(tx===null)return;const dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>40)show(i+(dx<0?1:-1));tx=null;});
+addEventListener('resize',fit);fit();show(i);
+})();
+</script>
+</body>
+</html>
